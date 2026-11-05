@@ -1,0 +1,38 @@
+title: Remote NTLM Network Logon for Non-Machine Account
+id: 6f3a2c1e-8b4d-4e2a-9c7f-1a2b3c4d5e03
+status: experimental
+description: |
+  Detects a successful network logon (Logon Type 3) authenticated with NTLM
+  for a non-machine account. Base signal for unexpected valid-account reuse
+  (T1078), including SMB service authentication. Does not by itself prove
+  admin-share abuse, WMI execution, or lateral movement beyond authentication.
+
+  Correlate the same Logon ID with Security 4672 in a hunt or SIEM join.
+  A single Sigma rule cannot reliably join 4624 and 4672 across backends.
+references:
+  - https://attack.mitre.org/techniques/T1078/
+  - https://attack.mitre.org/techniques/T1021/002/
+author: Alexander Acevedo
+date: 2026-11-05
+tags:
+  - attack.initial-access
+  - attack.t1078
+  - attack.t1021.002
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4624
+    LogonType: 3
+    AuthenticationPackageName: NTLM
+  filter_machine:
+    TargetUserName|endswith: '$'
+  filter_anonymous:
+    TargetUserName: ANONYMOUS LOGON
+  condition: selection and not filter_machine and not filter_anonymous
+falsepositives:
+  - Legitimate remote administration from approved jump hosts using NTLM
+  - Legacy applications or scanners that authenticate with NTLM over SMB/WMI
+  - Management tooling that opens many short-lived sessions (count Logon IDs, not raw events)
+level: medium
